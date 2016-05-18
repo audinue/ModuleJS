@@ -90,3 +90,9 @@ export var bar = 'bar';
 ```
 
 NOTE: Multiple variables initialization is *not* supported.
+
+## Download
+
+[module.js](https://github.com/audinue/ModuleJS/releases/download/1.0.0/module.js) (4.11KB)
+
+[module.min.js](https://github.com/audinue/ModuleJS/releases/download/1.0.0/module.min.js) (2.10KB)
