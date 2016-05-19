@@ -33,34 +33,45 @@
 		};
 
 		module.loadString = function(id, string) {
-			var children  = [];
-			var directory = id.replace(/[^\/]+$/, '');
+			var imported = [];
 			string = string
 				.replace(
-					/import\s+['"]([^'"]+)['"]/ig,
+					/import\s+['"]([^'"]+)['"](\s*;)?/ig,
 					function(all, source) {
-						return IMPORTS + '("' + source + '")';
+						imported.push(IMPORTS + '("' + source + '");\n');
+						return '';
 					}
 				)
 				.replace(
-					/import\s+([a-z_$][a-z0-9_$]*)\s+from\s+['"]([^'"]+)['"]/ig,
+					/import\s+\*\s+as\s+([a-z_$][a-z0-9_$]*)\s+from\s+['"]([^'"]+)['"](\s*;)?/ig,
 					function(all, name, source) {
-						return 'var ' + name + ' = ' + IMPORTS + '("' + source + '").default';
+						imported.push('var ' + name + ' = ' + IMPORTS + '("' + source + '");\n');
+						return '';
 					}
 				)
 				.replace(
-					/import\s+\{([^\}]+)\}\s+from\s+['"]([^'"]+)['"]/g,
+					/import\s+([a-z_$][a-z0-9_$]*)\s+from\s+['"]([^'"]+)['"](\s*;)?/ig,
+					function(all, name, source) {
+						imported.push('var ' + name + ' = ' + IMPORTS + '("' + source + '").default;\n');
+						return '';
+					}
+				)
+				.replace(
+					/import\s+\{([^\}]+)\}\s+from\s+['"]([^'"]+)['"](\s*;)?/g,
 					function(all, names, source) {
-						return names.split(/,/).map(function(name) {
+						names.split(/,/).map(function(name) {
 							return name.replace(
 								/\s*([a-z_$][a-z0-9_$]*)(?:\s+as\s+([a-z_$][a-z0-9_$]*))?/ig,
 								function(all, name, alias) {
-									return 'var ' + (alias || name) + ' = ' + IMPORTS + '("' + source + '").' + name;
+									imported.push('var ' + (alias || name) + ' = ' + IMPORTS + '("' + source + '").' + name + ';\n');
 								}
 							);
-						}).join('');
+						});
+						return '';
 					}
-				)
+				);
+			var exported = [];
+			string = string
 				.replace(
 					/export\s+default\s+/ig,
 					function() {
@@ -68,20 +79,71 @@
 					}
 				)
 				.replace(
-					/export\s+(?!default)(var|function)\s+([a-z_$][a-z0-9_$]*)/ig,
-					function(all, type, name) {
-						return EXPORTS + '.' + name + (type == 'function' ? ' = function' : '');
+					/export\s+((?:var|function)\s+([a-z_$][a-z0-9_$]*))/ig,
+					function(all, rest, name) {
+						exported.push(EXPORTS + '.' + name + ' = ' + name + ';\n');
+						return rest;
 					}
 				)
-				.replace(new RegExp(IMPORTS + '\\("([^"]+)"\\)', 'g'), function(all, child) {
+				.replace(
+					/export\s+\{([^\}]+)\}\s+from\s+['"]([^'"]+)['"](\s*;)?/g,
+					function(all, names, source) {
+						names.split(/,/).forEach(function(name) {
+							name.replace(
+								/\s*([a-z_$][a-z0-9_$]*)(?:\s+as\s+([a-z_$][a-z0-9_$]*))?/ig,
+								function(all, name, alias) {
+									exported.push(EXPORTS + '.' + (alias || name) + ' = ' + IMPORTS + '("' + source + '").' + name + ';\n');
+								}
+							);
+						});
+						return '';
+					}
+				)
+				.replace(
+					/export\s+\{([^\}]+)\}(\s*;)?/g,
+					function(all, names) {
+						names.split(/,/).forEach(function(name) {
+							name.replace(
+								/\s*([a-z_$][a-z0-9_$]*)(?:\s+as\s+([a-z_$][a-z0-9_$]*))?/ig,
+								function(all, name, alias) {
+									exported.push(EXPORTS + '.' + (alias || name) + ' = ' + name + ';\n');
+								}
+							);
+						});
+						return '';
+					}
+				)
+				.replace(
+					/export\s+\*\s+from\s+['"]([^'"]+)['"](\s*;)?/ig,
+					function(all, source) {
+						exported.push(IMPORTS + '("' + source + '", ' + EXPORTS + ');\n');
+						return '';
+					}
+				);
+			var statement;
+			while(statement = imported.pop()) {
+				string = statement + string;
+			}
+			while(statement = exported.shift()) {
+				string = string + statement;
+			}
+			var children  = [];
+			var directory = id.replace(/[^\/]+$/, '');
+			string = string
+				.replace(new RegExp(IMPORTS + '\\("([^"]+)"', 'g'), function(all, child) {
 					child = normalize(directory + child);
 					children.push(child);
-					return IMPORTS + '("' + child + '")';
+					return IMPORTS + '("' + child + '"';
 				})
 				+ '\n//# sourceURL=' + id;
 			var loaded = function() {
 				isLoaded = true;
 				new Function(IMPORTS, EXPORTS, string)(imports, module.exports);
+				for(var i in module.exports) {
+					if(typeof module.exports[i] == 'function') {
+						module.exports[i].bind(window);
+					}
+				}
 				var callback;
 				while(callback = callbacks.shift()) {
 					callback();
@@ -117,8 +179,17 @@
 
 	var modules = [];
 
-	function imports(id) {
-		return modules[id].exports;
+	function imports(id, exports) {
+		if(exports === undefined) {
+			return modules[id].exports;
+		}
+		var imported = imports(id);
+		for(var member in imported) {
+			if(member == 'default') {
+				continue;
+			}
+			exports[member] = imported[member];
+		}
 	}
 
 	function loadString(id, string, callback) {
@@ -155,7 +226,7 @@
 	}
 
 	if(script.textContent) {
-		loadString(location.href + '-contained', script.textContent, noop);
+		loadString(location.href + ' (contained)', script.textContent, noop);
 	}
 
 	var DOM_CONTENT_LOADED = 'DOMContentLoaded';
@@ -164,11 +235,10 @@
 		document.removeEventListener(DOM_CONTENT_LOADED, domContentLoaded, false);
 		var scripts = document.querySelectorAll('script[type=module]');
 		for(var i = 0, length = scripts.length; i < length; i++) {
-			loadString(location.href + '-inline-' + (i + 1), scripts[i].textContent, noop);
+			loadString(location.href + ' (inline-' + (i + 1) + ')', scripts[i].textContent, noop);
 		}
 	}
 
 	document.addEventListener(DOM_CONTENT_LOADED, domContentLoaded, false);
 
 }(document));
-
