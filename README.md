@@ -111,7 +111,7 @@ NOTE: Multiple variables initialization (`export var foo = 1, bar = 2, ...;`) is
 export { foo as bar } from 'baz.js';
 ```
 
-#### Entire Module Re-Export (except `default` export)
+#### Entire Module Re-Export (re-export all members except `default`)
 
 ```JavaScript
 export * as foo from 'foo.js';
