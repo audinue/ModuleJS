@@ -56,45 +56,75 @@ import foo from 'foo.js';
 
 ## Supported Syntax
 
-### No-Side Effects Import
+### Importing
 
-For consistency.
+#### No-Side Effects Import
 
 ```JavaScript
 import 'foo.js';
 ```
 
-### Default Import
+#### Default Import
 
 ```JavaScript
 import foo from 'foo.js';
 ```
 
-### Named Import
+#### Named Import
 
 ```JavaScript
 import { foo, bar as baz } from 'qux.js';
 ```
 
-### Default Export
+#### Entire Module Import
+
+```JavaScript
+import * as foo from 'foo.js';
+```
+
+### Exporting
+
+#### Default Export
 
 ```JavaScript
 export default 'foo';
 ```
 
-### Named Export
+#### Named Export
 
 ```JavaScript
 export function foo() {}
 export var bar = 'bar';
+function baz() {
+	console.log('baz');
+}
+export { baz as qux }
 ```
 
-NOTE: Multiple variables initialization is *not* supported.
+NOTE: Multiple variables initialization (`export var foo = 1, bar = 2, ...;`) is *not* supported.
+
+### Re-Exporting
+
+#### Named Re-Export
+
+```JavaScript
+export { foo as bar } from 'baz.js';
+```
+
+#### Entire Module Re-Export (except `default` export)
+
+```JavaScript
+export * as foo from 'foo.js';
+```
 
 ## Download
 
 No dependencies required.
 
-[module.js](https://github.com/audinue/ModuleJS/releases/download/1.0.0/module.js) (4.11KB)
+[module.js](https://github.com/audinue/ModuleJS/releases/download/1.1.0/module.js) (6.12KB)
 
-[module.min.js](https://github.com/audinue/ModuleJS/releases/download/1.0.0/module.min.js) (2.10KB)
+[module.min.js](https://github.com/audinue/ModuleJS/releases/download/1.1.0/module.min.js) (3.11KB)
+
+## Implementation
+
+See [TRANSLATION.md](https://github.com/audinue/ModuleJS/blob/master/TRANSLATION.md)
