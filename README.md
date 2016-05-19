@@ -3,7 +3,7 @@
 
 Static module system for the browsers.
 
-- Cleaner ES6 syntax.
+- Cleaner ES2015 syntax.
 - No build step required.
 - It is just the module system, nothing more.
 
