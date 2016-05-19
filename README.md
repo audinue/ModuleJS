@@ -3,7 +3,7 @@
 
 Static module system for the browsers.
 
-- Cleaner *subset* of ES6 syntax.
+- Cleaner ES6 syntax.
 - No build step required.
 - It is just the module system, nothing more.
 
@@ -114,7 +114,7 @@ export { foo as bar } from 'baz.js';
 #### Entire Module Re-Export (re-export all members except `default`)
 
 ```JavaScript
-export * as foo from 'foo.js';
+export * from 'foo.js';
 ```
 
 ## Download
